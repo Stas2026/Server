@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Прогрес-бар</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #87CEFA; /* Блакитний фон */
+      overflow: hidden;
+      position: relative;
+    }
+
+    #progress-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 20px;
+      background-color: #ccc; /* Сірий фон прогрес-бара */
+    }
+
+    #progress-bar {
+      width: 0;
+      height: 100%;
+      background-color: #4caf50; /* Зелений заповнення */
+      transition: width 0.2s;
+    }
+
+    #level {
+      position: fixed;
+      top: 30px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #000;
+    }
+
+    img {
+      max-width: 120px; /* Ще більше зменшення розміру */
+      cursor: pointer;
+    }
+
+    /* Великий сірий прямокутник (коли сервер вимкнено) */
+    #error-message {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #808080; /* Непрозорий сірий */
+      color: white;
+      font-size: 30px;
+      font-weight: bold;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      z-index: 3; /* Найвищий пріоритет */
+    }
+
+    /* Маленький прямокутник (підключення перервано) */
+    #disconnect-message {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      color: black;
+      font-size: 20px;
+      font-weight: bold;
+      padding: 20px;
+      border: 2px solid black;
+      text-align: center;
+      z-index: 2;
+    }
+
+    #disconnect-message button {
+      margin-top: 10px;
+      padding: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+  </style>
+</head>
+<body>
+  <div id="error-message">Наразі сервер вимкнено. Будь ласка, увімкніть сервер і спробуйте знову.</div>
+
+  <div id="disconnect-message">
+    <p>Підключення перервано</p>
+    <button onclick="handleDisconnect()">ОК</button>
+  </div>
+
+  <!-- Прогрес-бар -->
+  <div id="progress-container">
+    <div id="progress-bar"></div>
+  </div>
+  <div id="level">Рівень: 1</div>
+
+  <!-- Зображення по центру -->
+  <img id="center-image" src="Img/image1846.png" alt="Центральне зображення">
+
+  <script>
+    let level = 1; // Початковий рівень
+    let progress = 0; // Початковий прогрес
+    let serverOnline = true; // Статус сервера
+    const progressBar = document.getElementById("progress-bar");
+    const levelDisplay = document.getElementById("level");
+    const centerImage = document.getElementById("center-image");
+    const errorMessage = document.getElementById("error-message");
+    const disconnectMessage = document.getElementById("disconnect-message");
+
+    function checkServer() {
+      fetch('http://127.0.0.1:5000/')
+        .then(response => {
+          if (response.ok) {
+            serverOnline = true;
+            errorMessage.style.display = 'none';
+          } else {
+            throw new Error("Server not available");
+          }
+        })
+        .catch(() => {
+          serverOnline = false;
+          errorMessage.style.display = 'flex';
+        });
+    }
+
+    // Запускаємо перевірку серверу при старті
+    checkServer();
+
+    // Обробник натискання на зображення (гравець клікає)
+    centerImage.addEventListener("click", () => {
+      if (!serverOnline) return; // Блокуємо гру, якщо сервер вимкнено
+
+      progress += 10; // Збільшуємо прогрес
+      if (progress > 100) {
+        progress = 100; // Обмежуємо максимум
+      }
+      progressBar.style.width = progress + "%"; // Оновлюємо ширину прогрес-бара
+
+      if (progress === 100) {
+        setTimeout(() => {
+          progress = 0;
+          level++;
+          levelDisplay.textContent = `Рівень: ${level}`;
+          progressBar.style.width = "0%";
+        }, 300);
+      }
+    });
+
+    // Функція для перевірки статусу сервера під час гри
+    setInterval(() => {
+      fetch('http://127.0.0.1:5000/')
+        .then(response => {
+          if (!response.ok) throw new Error();
+          serverOnline = true;
+        })
+        .catch(() => {
+          if (serverOnline) {
+            // Якщо сервер раніше був онлайн, а тепер вимкнувся → показуємо маленький прямокутник
+            serverOnline = false;
+            disconnectMessage.style.display = 'block';
+          }
+        });
+    }, 3000); // Перевірка кожні 3 секунди
+
+    // Обробник кнопки "ОК"
+    function handleDisconnect() {
+      disconnectMessage.style.display = 'none';
+      errorMessage.style.display = 'flex'; // Показуємо великий прямокутник
+    }
+  </script>
+</body>
+</html>
